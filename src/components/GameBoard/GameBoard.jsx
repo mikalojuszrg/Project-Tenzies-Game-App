@@ -1,31 +1,20 @@
 import styles from "./GameBoard.module.scss";
 import Confetti from "react-confetti";
-import { nanoid } from "nanoid";
 import classNames from "classnames";
 import Die from "../Die/Die";
 import { useState } from "react";
 import { useEffect } from "react";
+import { allNewDice, generateDice } from "../../consts/generateDice";
 
 const cn = classNames.bind(styles);
-
-const generateDice = () => {
-  return {
-    value: Math.ceil(Math.random() * 6),
-    isHeld: false,
-    id: nanoid(),
-  };
-};
-
-const allNewDice = () => {
-  const array = Array(10)
-    .fill()
-    .map(() => generateDice());
-  return array;
-};
 
 const GameBoard = () => {
   const [diceNumbers, setDiceNumbers] = useState(() => allNewDice());
   const [tenzies, setTenzies] = useState(false);
+  const [rollCount, setRollCount] = useState(0);
+  const [timer, setTimer] = useState(0);
+  const [timerOn, setTimerOn] = useState(true);
+  const [timeArray, setTimeArray] = useState([]);
 
   useEffect(() => {
     if (
@@ -33,9 +22,19 @@ const GameBoard = () => {
       diceNumbers.every((dice) => dice.value === diceNumbers[0].value)
     ) {
       setTenzies((prevValue) => !prevValue);
+      setTimerOn(false);
     }
-    console.log(diceNumbers);
   }, [diceNumbers]);
+
+  useEffect(() => {
+    if (timerOn) {
+      const interval = setInterval(() => {
+        setTimer((prevTimer) => prevTimer + 1);
+      }, 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [timerOn]);
 
   const handleDiceNumbers = () => {
     setDiceNumbers((prevArray) =>
@@ -48,9 +47,20 @@ const GameBoard = () => {
       })
     );
     if (diceNumbers.filter((dice) => dice.isHeld === true).length === 10) {
+      setTimeArray((prevTimearray) => {
+        localStorage.setItem(
+          "Play time",
+          JSON.stringify([...prevTimearray, timer])
+        );
+        return [...prevTimearray, timer];
+      });
       setDiceNumbers(allNewDice());
       setTenzies(false);
+      setRollCount(-1);
+      setTimerOn(true);
+      setTimer(0);
     }
+    setRollCount((prevCount) => prevCount + 1);
   };
 
   const holdDice = (id) => {
@@ -84,6 +94,8 @@ const GameBoard = () => {
             />
           ))}
         </div>
+        <p className={cn(styles["game__timer-count"])}>Time: {timer}s</p>
+        <p className={cn(styles["game__roll-count"])}>Rolled: {rollCount}</p>
         <button onClick={handleDiceNumbers} className={cn(styles.game__button)}>
           {tenzies ? "New game" : "Roll"}
         </button>
